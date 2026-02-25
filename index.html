@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مقارنة شاملة بين التقريرين</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+
+<style>
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Cairo', sans-serif;
+  direction: rtl;
+  padding: 40px 20px;
+  color: #fff;
+
+  background:
+    linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.65)),
+    url("https://raw.githubusercontent.com/xhhp1/mechanics/main/images/mechan.png");
+
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+h2 {
+  text-align: center;
+  margin-bottom: 30px;
+  font-weight: 700;
+}
+
+.container {
+  display: flex;
+  gap: 25px;
+  flex-wrap: wrap;
+}
+
+.box {
+  flex: 1;
+  min-width: 300px;
+  padding: 20px;
+  border-radius: 15px;
+
+  background: rgba(30, 41, 59, 0.75);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+  transition: 0.3s;
+}
+
+.box:hover {
+  transform: translateY(-5px);
+}
+
+h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-weight: 600;
+}
+
+textarea {
+  width: 100%;
+  height: 300px;
+  padding: 15px;
+  border-radius: 10px;
+  border: none;
+  resize: none;
+  font-size: 14px;
+  font-family: 'Cairo', sans-serif;
+  background: rgba(15, 23, 42, 0.8);
+  color: #fff;
+  outline: none;
+  transition: 0.3s;
+}
+
+textarea:focus {
+  box-shadow: 0 0 0 2px #38bdf8;
+}
+
+button {
+  display: block;
+  margin: 30px auto;
+  padding: 14px 40px;
+  border: none;
+  border-radius: 50px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  background: linear-gradient(90deg,#38bdf8,#6366f1);
+  color: white;
+  transition: 0.3s;
+}
+
+button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 10px 25px rgba(99,102,241,0.6);
+}
+
+.result {
+  margin-top: 30px;
+  padding: 20px;
+  border-radius: 15px;
+
+  background: rgba(30, 41, 59, 0.75);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+  min-height: 80px;
+}
+
+.result b {
+  color: #22c55e;
+}
+
+.missing {
+  background: rgba(239,68,68,0.15);
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  color: #ff6b6b;
+  font-weight: bold;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  margin: 15px 0;
+}
+
+@media (max-width: 768px) {
+  .container {
+    flex-direction: column;
+  }
+}
+
+</style>
+</head>
+<body>
+
+<h2>📊 مقارنة تلقائية كاملة بين التقريرين</h2>
+
+<div class="container">
+  <div class="box">
+    <h3>تقرير الإشراف</h3>
+    <textarea id="supervision"></textarea>
+  </div>
+
+  <div class="box">
+    <h3>تقرير العمليات</h3>
+    <textarea id="operations"></textarea>
+  </div>
+</div>
+
+<button onclick="compare()">قارن الآن</button>
+
+<div class="result" id="result"></div>
+
+<script>
+
+function clean(text){
+  return text
+    .replace(/\*\*/g,"")
+    .replace(/ـ+/g,"")
+    .replace(/\[.*?\]\(.*?\)/g,"");
+}
+
+function extractSections(text){
+  let sections = {};
+  let lines = text.split("\n");
+
+  lines.forEach(line=>{
+    let ids = line.match(/<@\d+>/g);
+    if(!ids) return;
+
+    let name = line.split("<@")[0].replace(":","").trim();
+
+    ids.forEach(id=>{
+      if(!sections[id]) sections[id] = [];
+      sections[id].push(name);
+    });
+  });
+
+  return sections;
+}
+
+function compare(){
+  let supText = clean(document.getElementById("supervision").value);
+  let opsText = clean(document.getElementById("operations").value);
+
+  let supIDs = extractSections(supText);
+  let opsIDs = extractSections(opsText);
+
+  let result = document.getElementById("result");
+  result.innerHTML = "";
+
+  let hasDifference = false;
+
+  for(let id in supIDs){
+    if(!opsIDs[id]){
+      hasDifference = true;
+      result.innerHTML += "<div class='missing'>" + id + "</div>";
+      result.innerHTML += "موجود في الإشراف داخل:<br>";
+      result.innerHTML += supIDs[id].join("<br>");
+      result.innerHTML += "<hr>";
+    }
+  }
+
+  for(let id in opsIDs){
+    if(!supIDs[id]){
+      hasDifference = true;
+      result.innerHTML += "<div class='missing'>" + id + "</div>";
+      result.innerHTML += "موجود في العمليات داخل:<br>";
+      result.innerHTML += opsIDs[id].join("<br>");
+      result.innerHTML += "<hr>";
+    }
+  }
+
+  if(!hasDifference){
+    result.innerHTML = "<b>✔ لا يوجد أي اختلاف بين التقريرين</b>";
+  }
+}
+
+</script>
+
+</body>
+</html>
