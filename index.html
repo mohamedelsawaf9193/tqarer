@@ -1,17 +1,14 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>مقارنة شاملة بين التقريرين</title>
 
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
 
 <style>
-
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
   margin: 0;
@@ -54,9 +51,7 @@ h2 {
   transition: 0.3s;
 }
 
-.box:hover {
-  transform: translateY(-5px);
-}
+.box:hover { transform: translateY(-5px); }
 
 h3 {
   margin-top: 0;
@@ -79,9 +74,7 @@ textarea {
   transition: 0.3s;
 }
 
-textarea:focus {
-  box-shadow: 0 0 0 2px #38bdf8;
-}
+textarea:focus { box-shadow: 0 0 0 2px #38bdf8; }
 
 button {
   display: block;
@@ -113,9 +106,7 @@ button:hover {
   min-height: 80px;
 }
 
-.result b {
-  color: #22c55e;
-}
+.result b { color: #22c55e; }
 
 .missing {
   background: rgba(239,68,68,0.15);
@@ -133,13 +124,11 @@ hr {
 }
 
 @media (max-width: 768px) {
-  .container {
-    flex-direction: column;
-  }
+  .container { flex-direction: column; }
 }
-
 </style>
 </head>
+
 <body>
 
 <h2>📊 متابعة السجلات (تقارير العمليات - تقارير الاشراف)</h2>
@@ -147,12 +136,12 @@ hr {
 <div class="container">
   <div class="box">
     <h3>تقرير الإشراف</h3>
-    <textarea id="supervision"></textarea>
+    <textarea id="supervision" placeholder="الصق تقرير الإشراف هنا..."></textarea>
   </div>
 
   <div class="box">
     <h3>تقرير العمليات</h3>
-    <textarea id="operations"></textarea>
+    <textarea id="operations" placeholder="الصق تقرير العمليات هنا..."></textarea>
   </div>
 </div>
 
@@ -161,31 +150,128 @@ hr {
 <div class="result" id="result"></div>
 
 <script>
-
 function clean(text){
   return text
     .replace(/\*\*/g,"")
     .replace(/ـ+/g,"")
-    .replace(/\[.*?\]\(.*?\)/g,"");
+    .replace(/\[.*?\]\(.*?\)/g,""); // إزالة الروابط markdown
+}
+
+function normalizeLabel(label){
+  // ✅ عناوين ثابتة لا تتغير إطلاقًا
+  const fixedLabels = new Set([
+    "مسؤول افتتاح المتجر",
+    "المشرف الميداني بروم الكراج",
+    "مشرف المنطقة بروم الكراج",
+    "مشرف المتدرب بروم الكراج"
+  ]);
+
+  let raw = label
+    .replace(/[()]/g, "")
+    .replace(/ـ+/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (fixedLabels.has(raw)) return raw;
+
+  // --------- باقي الدالة كما هي ----------
+  label = raw;
+
+  const map = {
+    "القيادة": "القيادة",
+    "قيادة": "القيادة",
+    "قيادة الكراج": "القيادة",
+    "قياده الكراج": "القيادة",
+
+    "مستشار القائد": "مستشار القائد",
+
+    "اشراف عام": "اشراف عام",
+    "إشراف عام": "اشراف عام",
+    "المشرف العام": "اشراف عام",
+
+    "اشراف ميداني": "اشراف ميداني",
+    "إشراف ميداني": "اشراف ميداني",
+    "المشرف الميداني": "اشراف ميداني",
+
+    "اشراف المناطق": "اشراف المناطق",
+    "إشراف المناطق": "اشراف المناطق",
+    "مشرفين المناطق": "اشراف المناطق",
+    "مشرف المناطق": "اشراف المناطق",
+    "مشرف المنطقة": "اشراف المناطق",
+
+    "مشرفين متدربين": "مشرفين متدربين",
+    "مشرفين متدربين ": "مشرفين متدربين",
+
+    "لاعب معتمد": "المعتمدين",
+    "السيدات و المعتمدين": "المعتمدين",
+    "السيدات والمعتمدين": "المعتمدين",
+
+    "العمليات": "العمليات",
+    "نائب العمليات": "نائب العمليات",
+
+    "مركز الإتصالات": "مركز الاتصالات",
+    "مركز الإتصال": "مركز الاتصالات",
+    "مركز الاتصالات": "مركز الاتصالات",
+
+    "فني ميناء لوس": "فني ميناء لوس",
+    "ميناء لوس": "فني ميناء لوس",
+
+    "فني ميناء بوليتو": "فني ميناء بوليتو",
+    "ميناء بوليتو": "فني ميناء بوليتو",
+
+    "البحث والانقاذ": "البحث والانقاذ",
+    "البحث والإنقاذ": "البحث والانقاذ",
+  };
+
+  if (map[label]) return map[label];
+
+  let simplified = label
+    .replace(/بروم الكراج/g, "")
+    .replace(/الكراج/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return map[simplified] || simplified;
 }
 
 function extractSections(text){
-  let sections = {};
-  let lines = text.split("\n");
+  const sections = {}; // id -> Set(labels)
+  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
 
-  lines.forEach(line=>{
-    let ids = line.match(/<@\d+>/g);
-    if(!ids) return;
+  let currentLabel = null;
+  const headerRegex = /^(.+?)\s*:\s*(.*)$/;
 
-    let name = line.split("<@")[0].replace(":","").trim();
+  for (let line of lines) {
+    const m = line.match(headerRegex);
 
-    ids.forEach(id=>{
-      if(!sections[id]) sections[id] = [];
-      sections[id].push(name);
-    });
-  });
+    if (m) {
+      const rawLabel = m[1].trim();
+      currentLabel = normalizeLabel(rawLabel);
 
-  return sections;
+      const rest = m[2] || "";
+      const idsInline = rest.match(/<@\d+>/g) || [];
+
+      for (const id of idsInline) {
+        if (!sections[id]) sections[id] = new Set();
+        sections[id].add(currentLabel);
+      }
+      continue;
+    }
+
+    // سطر تابع للعنوان السابق
+    if (currentLabel) {
+      const ids = line.match(/<@\d+>/g) || [];
+      for (const id of ids) {
+        if (!sections[id]) sections[id] = new Set();
+        sections[id].add(currentLabel);
+      }
+    }
+  }
+
+  // Set -> Array
+  const out = {};
+  for (const id in sections) out[id] = [...sections[id]];
+  return out;
 }
 
 function compare(){
@@ -200,22 +286,54 @@ function compare(){
 
   let hasDifference = false;
 
-  for(let id in supIDs){
+  // موجود في الإشراف ومش موجود في العمليات
+  for (let id in supIDs){
     if(!opsIDs[id]){
       hasDifference = true;
       result.innerHTML += "<div class='missing'>" + id + "</div>";
       result.innerHTML += "موجود في الإشراف داخل:<br>";
-      result.innerHTML += supIDs[id].join("<br>");
+      result.innerHTML += [...new Set(supIDs[id])].join("<br>");
       result.innerHTML += "<hr>";
     }
   }
 
-  for(let id in opsIDs){
+  // موجود في العمليات ومش موجود في الإشراف
+  for (let id in opsIDs){
     if(!supIDs[id]){
       hasDifference = true;
       result.innerHTML += "<div class='missing'>" + id + "</div>";
       result.innerHTML += "موجود في العمليات داخل:<br>";
-      result.innerHTML += opsIDs[id].join("<br>");
+      result.innerHTML += [...new Set(opsIDs[id])].join("<br>");
+      result.innerHTML += "<hr>";
+    }
+  }
+
+  // موجود في الاتنين لكن التصنيف مختلف (الفروق الدقيقة)
+  for (let id in supIDs){
+    if(!opsIDs[id]) continue;
+
+    let supSet = new Set(supIDs[id].map(x => x.trim()).filter(Boolean));
+    let opsSet = new Set(opsIDs[id].map(x => x.trim()).filter(Boolean));
+
+    let onlyInSup = [...supSet].filter(x => !opsSet.has(x)).sort();
+    let onlyInOps = [...opsSet].filter(x => !supSet.has(x)).sort();
+
+    if (onlyInSup.length || onlyInOps.length){
+      hasDifference = true;
+
+      result.innerHTML += "<div class='missing'>" + id + "</div>";
+      result.innerHTML += "⚠ موجود في التقريرين لكن التصنيف مختلف:<br><br>";
+
+      if (onlyInSup.length){
+        result.innerHTML += "<b>موجود في الإشراف فقط داخل:</b><br>";
+        result.innerHTML += onlyInSup.join("<br>") + "<br><br>";
+      }
+
+      if (onlyInOps.length){
+        result.innerHTML += "<b>موجود في العمليات فقط داخل:</b><br>";
+        result.innerHTML += onlyInOps.join("<br>") + "<br><br>";
+      }
+
       result.innerHTML += "<hr>";
     }
   }
@@ -224,7 +342,6 @@ function compare(){
     result.innerHTML = "<b>✔ لا يوجد أي اختلاف بين التقريرين</b>";
   }
 }
-
 </script>
 
 </body>
