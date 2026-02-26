@@ -30,17 +30,17 @@ body {
 
 .container {
   display: flex;
-  gap: 25px;
+  gap: 40px;              /* مسافة أكبر بينهم */
   flex-wrap: wrap;
   justify-content: center;
-  max-width: 1200px;
+  max-width: 1500px;      /* مساحة أكبر */
   margin: auto;
 }
 
 .box {
-  flex: 1;
-  min-width: 450px;
-  padding: 25px;
+  flex: 0 1 600px;        /* عرض ثابت أكبر */
+  min-width: 550px;       /* يمنع الضغط */
+  padding: 30px;
   border-radius: 18px;
   background: rgba(30, 41, 59, 0.85);
   backdrop-filter: blur(6px);
@@ -54,7 +54,7 @@ body {
 
 textarea {
   width: 100%;
-  height: 500px;
+  height: 550px;
   padding: 18px;
   border-radius: 12px;
   border: 1px solid rgba(255,255,255,0.1);
@@ -230,11 +230,16 @@ function extractSections(text){
 
       const rawOriginal = m[1].trim();
 
-      if (excludedHeaders.has(rawOriginal)) {
-        currentOriginal = null;
-        currentNormalized = null;
-        continue;
-      }
+   const normalizedHeader = normalizeLabel(rawOriginal);
+
+if (
+  normalizedHeader.includes("بروم الكراج") ||
+  normalizedHeader === normalizeLabel("مسؤول افتتاح المتجر")
+) {
+  currentOriginal = null;
+  currentNormalized = null;
+  continue;
+}
 
       currentOriginal = rawOriginal;
       currentNormalized = normalizeLabel(currentOriginal);
