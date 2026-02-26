@@ -158,25 +158,13 @@ function clean(text){
 }
 
 function normalizeLabel(label){
-  // ✅ عناوين ثابتة لا تتغير إطلاقًا
-  const fixedLabels = new Set([
-    "مسؤول افتتاح المتجر",
-    "المشرف الميداني بروم الكراج",
-    "مشرف المنطقة بروم الكراج",
-    "مشرف المتدرب بروم الكراج"
-  ]);
-
-  let raw = label
+  label = label
     .replace(/[()]/g, "")
     .replace(/ـ+/g, "")
     .replace(/\s+/g, " ")
     .trim();
 
-  if (fixedLabels.has(raw)) return raw;
-
-  // --------- باقي الدالة كما هي ----------
-  label = raw;
-
+  // قاموس توحيد المسميات (زوده براحتك)
   const map = {
     "القيادة": "القيادة",
     "قيادة": "القيادة",
@@ -225,6 +213,7 @@ function normalizeLabel(label){
 
   if (map[label]) return map[label];
 
+  // تنضيف عام لو label مش معروف (علشان كلمات زي "بروم الكراج" ما تعملش اختلاف)
   let simplified = label
     .replace(/بروم الكراج/g, "")
     .replace(/الكراج/g, "")
@@ -234,43 +223,82 @@ function normalizeLabel(label){
   return map[simplified] || simplified;
 }
 
+/*
+  ✅ استخراج الأقسام:
+  - نقارن بالاسم الموحّد (normalized)
+  - لكن نحتفظ بالاسم الأصلي (original) للعرض
+  - ونستبعد عناوين معينة من المقارنة نهائيًا
+*/
 function extractSections(text){
-  const sections = {}; // id -> Set(labels)
+  // id -> Map(normalizedLabel -> Set(originalLabels))
+  const sections = {};
   const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
 
-  let currentLabel = null;
+  let currentOriginal = null;
+  let currentNormalized = null;
+
   const headerRegex = /^(.+?)\s*:\s*(.*)$/;
+
+  // 🚫 عناوين لا تدخل أي مقارنة (كأنها غير موجودة)
+  const excludedHeaders = new Set([
+    "مسؤول افتتاح المتجر",
+    "المشرف الميداني بروم الكراج",
+    "مشرف المنطقة بروم الكراج",
+    "مشرف المتدرب بروم الكراج"
+  ]);
+
+  function cleanHeaderLabel(label){
+    return label
+      .replace(/[()]/g, "")
+      .replace(/ـ+/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function add(id, normalized, original){
+    if (!sections[id]) sections[id] = new Map();
+    if (!sections[id].has(normalized)) sections[id].set(normalized, new Set());
+    sections[id].get(normalized).add(original);
+  }
 
   for (let line of lines) {
     const m = line.match(headerRegex);
 
     if (m) {
-      const rawLabel = m[1].trim();
-      currentLabel = normalizeLabel(rawLabel);
+      const rawOriginal = cleanHeaderLabel(m[1]);
+
+      // لو العنوان مستبعد، تجاهله وتجاهل أي أسطر تحته
+      if (excludedHeaders.has(rawOriginal)) {
+        currentOriginal = null;
+        currentNormalized = null;
+        continue;
+      }
+
+      currentOriginal = rawOriginal;                    // للاسم الأصلي (العرض)
+      currentNormalized = normalizeLabel(rawOriginal);  // للاسم الموحّد (المقارنة)
 
       const rest = m[2] || "";
       const idsInline = rest.match(/<@\d+>/g) || [];
+      for (const id of idsInline) add(id, currentNormalized, currentOriginal);
 
-      for (const id of idsInline) {
-        if (!sections[id]) sections[id] = new Set();
-        sections[id].add(currentLabel);
-      }
       continue;
     }
 
     // سطر تابع للعنوان السابق
-    if (currentLabel) {
+    if (currentNormalized && currentOriginal) {
       const ids = line.match(/<@\d+>/g) || [];
-      for (const id of ids) {
-        if (!sections[id]) sections[id] = new Set();
-        sections[id].add(currentLabel);
-      }
+      for (const id of ids) add(id, currentNormalized, currentOriginal);
     }
   }
 
-  // Set -> Array
+  // تحويل Map/Set لشيء سهل الاستخدام: id -> { normalizedLabel: [originals...] }
   const out = {};
-  for (const id in sections) out[id] = [...sections[id]];
+  for (const id in sections) {
+    out[id] = {};
+    for (const [norm, originalsSet] of sections[id].entries()) {
+      out[id][norm] = [...originalsSet];
+    }
+  }
   return out;
 }
 
@@ -278,45 +306,60 @@ function compare(){
   let supText = clean(document.getElementById("supervision").value);
   let opsText = clean(document.getElementById("operations").value);
 
-  let supIDs = extractSections(supText);
-  let opsIDs = extractSections(opsText);
+  let sup = extractSections(supText); // id -> {normLabel: [originals...]}
+  let ops = extractSections(opsText);
 
   let result = document.getElementById("result");
   result.innerHTML = "";
 
   let hasDifference = false;
 
+  const getNorms = (obj) => new Set(Object.keys(obj || {}));
+
+  const originalsForNorms = (obj, norms) => {
+    const out = [];
+    for (const n of norms) {
+      const arr = (obj && obj[n]) ? obj[n] : [];
+      for (const x of arr) out.push(x);
+    }
+    return [...new Set(out)];
+  };
+
   // موجود في الإشراف ومش موجود في العمليات
-  for (let id in supIDs){
-    if(!opsIDs[id]){
+  for (let id in sup){
+    if(!ops[id]){
       hasDifference = true;
       result.innerHTML += "<div class='missing'>" + id + "</div>";
       result.innerHTML += "موجود في الإشراف داخل:<br>";
-      result.innerHTML += [...new Set(supIDs[id])].join("<br>");
+      const allNorms = Object.keys(sup[id] || {});
+      const originals = originalsForNorms(sup[id], allNorms);
+      result.innerHTML += (originals.join("<br>") || "(بدون تصنيف)");
       result.innerHTML += "<hr>";
     }
   }
 
   // موجود في العمليات ومش موجود في الإشراف
-  for (let id in opsIDs){
-    if(!supIDs[id]){
+  for (let id in ops){
+    if(!sup[id]){
       hasDifference = true;
       result.innerHTML += "<div class='missing'>" + id + "</div>";
       result.innerHTML += "موجود في العمليات داخل:<br>";
-      result.innerHTML += [...new Set(opsIDs[id])].join("<br>");
+      const allNorms = Object.keys(ops[id] || {});
+      const originals = originalsForNorms(ops[id], allNorms);
+      result.innerHTML += (originals.join("<br>") || "(بدون تصنيف)");
       result.innerHTML += "<hr>";
     }
   }
 
-  // موجود في الاتنين لكن التصنيف مختلف (الفروق الدقيقة)
-  for (let id in supIDs){
-    if(!opsIDs[id]) continue;
+  // موجود في الاتنين لكن التصنيف مختلف (نقارن بالـ normalized)
+  for (let id in sup){
+    if(!ops[id]) continue;
 
-    let supSet = new Set(supIDs[id].map(x => x.trim()).filter(Boolean));
-    let opsSet = new Set(opsIDs[id].map(x => x.trim()).filter(Boolean));
+    const supSet = getNorms(sup[id]);
+    const opsSet = getNorms(ops[id]);
 
-    let onlyInSup = [...supSet].filter(x => !opsSet.has(x)).sort();
-    let onlyInOps = [...opsSet].filter(x => !supSet.has(x)).sort();
+    const onlyInSup = [...supSet].filter(x => !opsSet.has(x)).sort();
+    const onlyInOps = [...opsSet].filter(x => !supSet.has(x)).sort();
 
     if (onlyInSup.length || onlyInOps.length){
       hasDifference = true;
@@ -326,12 +369,14 @@ function compare(){
 
       if (onlyInSup.length){
         result.innerHTML += "<b>موجود في الإشراف فقط داخل:</b><br>";
-        result.innerHTML += onlyInSup.join("<br>") + "<br><br>";
+        const originals = originalsForNorms(sup[id], onlyInSup);
+        result.innerHTML += (originals.join("<br>") || "(بدون تصنيف)") + "<br><br>";
       }
 
       if (onlyInOps.length){
         result.innerHTML += "<b>موجود في العمليات فقط داخل:</b><br>";
-        result.innerHTML += onlyInOps.join("<br>") + "<br><br>";
+        const originals = originalsForNorms(ops[id], onlyInOps);
+        result.innerHTML += (originals.join("<br>") || "(بدون تصنيف)") + "<br><br>";
       }
 
       result.innerHTML += "<hr>";
