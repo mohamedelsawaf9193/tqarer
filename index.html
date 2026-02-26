@@ -16,21 +16,13 @@ body {
   direction: rtl;
   padding: 40px 20px;
   color: #fff;
-
   background:
     linear-gradient(rgba(0,0,0,0.65), rgba(0,0,0,0.65)),
     url("https://raw.githubusercontent.com/xhhp1/mechanics/main/images/mechan.png");
-
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
   background-attachment: fixed;
-}
-
-h2 {
-  text-align: center;
-  margin-bottom: 30px;
-  font-weight: 700;
 }
 
 .container {
@@ -44,19 +36,7 @@ h2 {
   min-width: 300px;
   padding: 20px;
   border-radius: 15px;
-
   background: rgba(30, 41, 59, 0.75);
-  backdrop-filter: blur(12px);
-  box-shadow: 0 15px 35px rgba(0,0,0,0.4);
-  transition: 0.3s;
-}
-
-.box:hover { transform: translateY(-5px); }
-
-h3 {
-  margin-top: 0;
-  margin-bottom: 15px;
-  font-weight: 600;
 }
 
 textarea {
@@ -66,15 +46,10 @@ textarea {
   border-radius: 10px;
   border: none;
   resize: none;
-  font-size: 14px;
   font-family: 'Cairo', sans-serif;
   background: rgba(15, 23, 42, 0.8);
   color: #fff;
-  outline: none;
-  transition: 0.3s;
 }
-
-textarea:focus { box-shadow: 0 0 0 2px #38bdf8; }
 
 button {
   display: block;
@@ -82,31 +57,17 @@ button {
   padding: 14px 40px;
   border: none;
   border-radius: 50px;
-  font-size: 16px;
-  font-weight: 600;
   cursor: pointer;
   background: linear-gradient(90deg,#38bdf8,#6366f1);
   color: white;
-  transition: 0.3s;
-}
-
-button:hover {
-  transform: scale(1.05);
-  box-shadow: 0 10px 25px rgba(99,102,241,0.6);
 }
 
 .result {
   margin-top: 30px;
   padding: 20px;
   border-radius: 15px;
-
   background: rgba(30, 41, 59, 0.75);
-  backdrop-filter: blur(12px);
-  box-shadow: 0 10px 25px rgba(0,0,0,0.4);
-  min-height: 80px;
 }
-
-.result b { color: #22c55e; }
 
 .missing {
   background: rgba(239,68,68,0.15);
@@ -122,10 +83,6 @@ hr {
   border-top: 1px solid rgba(255,255,255,0.1);
   margin: 15px 0;
 }
-
-@media (max-width: 768px) {
-  .container { flex-direction: column; }
-}
 </style>
 </head>
 
@@ -136,12 +93,12 @@ hr {
 <div class="container">
   <div class="box">
     <h3>تقرير الإشراف</h3>
-    <textarea id="supervision" placeholder="الصق تقرير الإشراف هنا..."></textarea>
+    <textarea id="supervision"></textarea>
   </div>
 
   <div class="box">
     <h3>تقرير العمليات</h3>
-    <textarea id="operations" placeholder="الصق تقرير العمليات هنا..."></textarea>
+    <textarea id="operations"></textarea>
   </div>
 </div>
 
@@ -154,92 +111,61 @@ function clean(text){
   return text
     .replace(/\*\*/g,"")
     .replace(/ـ+/g,"")
-    .replace(/\[.*?\]\(.*?\)/g,""); // إزالة الروابط markdown
+    .replace(/\[.*?\]\(.*?\)/g,"");
 }
 
 function normalizeLabel(label){
   label = label
+    .replace(/[إأآا]/g, "ا")
+    .replace(/ى/g, "ي")
+    .replace(/ة/g, "ه")
     .replace(/[()]/g, "")
-    .replace(/ـ+/g, "")
     .replace(/\s+/g, " ")
     .trim();
 
-  // قاموس توحيد المسميات (زوده براحتك)
   const map = {
-    "القيادة": "القيادة",
-    "قيادة": "القيادة",
-    "قيادة الكراج": "القيادة",
-    "قياده الكراج": "القيادة",
+    "قياده الكراج": "القياده",
+    "قيادة الكراج": "القياده",
+    "قياده": "القياده",
+    "قيادة": "القياده",
 
-    "مستشار القائد": "مستشار القائد",
-
-    "اشراف عام": "اشراف عام",
-    "إشراف عام": "اشراف عام",
     "المشرف العام": "اشراف عام",
+    "اشراف عام": "اشراف عام",
 
-    "اشراف ميداني": "اشراف ميداني",
-    "إشراف ميداني": "اشراف ميداني",
     "المشرف الميداني": "اشراف ميداني",
+    "اشراف ميداني": "اشراف ميداني",
 
-    "اشراف المناطق": "اشراف المناطق",
-    "إشراف المناطق": "اشراف المناطق",
     "مشرفين المناطق": "اشراف المناطق",
     "مشرف المناطق": "اشراف المناطق",
     "مشرف المنطقة": "اشراف المناطق",
+    "اشراف المناطق": "اشراف المناطق",
 
     "مشرفين متدربين": "مشرفين متدربين",
-    "مشرفين متدربين ": "مشرفين متدربين",
 
-    "لاعب معتمد": "المعتمدين",
     "السيدات و المعتمدين": "المعتمدين",
     "السيدات والمعتمدين": "المعتمدين",
+    "لاعب معتمد": "المعتمدين",
 
     "العمليات": "العمليات",
     "نائب العمليات": "نائب العمليات",
 
-    "مركز الإتصالات": "مركز الاتصالات",
-    "مركز الإتصال": "مركز الاتصالات",
     "مركز الاتصالات": "مركز الاتصالات",
 
-    "فني ميناء لوس": "فني ميناء لوس",
-    "ميناء لوس": "فني ميناء لوس",
+    "فني ميناء لوس": "ميناء لوس",
+    "ميناء لوس": "ميناء لوس",
 
-    "فني ميناء بوليتو": "فني ميناء بوليتو",
-    "ميناء بوليتو": "فني ميناء بوليتو",
+    "فني ميناء بوليتو": "ميناء بوليتو",
+    "ميناء بوليتو": "ميناء بوليتو",
 
     "البحث والانقاذ": "البحث والانقاذ",
-    "البحث والإنقاذ": "البحث والانقاذ",
+    "البحث والإنقاذ": "البحث والانقاذ"
   };
 
-  if (map[label]) return map[label];
-
-  // تنضيف عام لو label مش معروف (علشان كلمات زي "بروم الكراج" ما تعملش اختلاف)
-  let simplified = label
-    .replace(/بروم الكراج/g, "")
-    .replace(/الكراج/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  return map[simplified] || simplified;
+  return map[label] || label;
 }
 
-/*
-  ✅ استخراج الأقسام:
-  - نقارن بالاسم الموحّد (normalized)
-  - لكن نحتفظ بالاسم الأصلي (original) للعرض
-  - ونستبعد عناوين معينة من المقارنة نهائيًا
-*/
 function extractSections(text){
-  // id -> Map(normalizedLabel -> Set(originalLabels))
-  const sections = {};
-  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
 
-  let currentOriginal = null;
-  let currentNormalized = null;
-
-  const headerRegex = /^(.+?)\s*:\s*(.*)$/;
-
-  // 🚫 عناوين لا تدخل أي مقارنة (كأنها غير موجودة)
   const excludedHeaders = new Set([
     "مسؤول افتتاح المتجر",
     "المشرف الميداني بروم الكراج",
@@ -247,13 +173,15 @@ function extractSections(text){
     "مشرف المتدرب بروم الكراج"
   ]);
 
-  function cleanHeaderLabel(label){
-    return label
-      .replace(/[()]/g, "")
-      .replace(/ـ+/g, "")
-      .replace(/\s+/g, " ")
-      .trim();
-  }
+  const sections = {};
+  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+
+  let currentOriginal = null;
+  let currentNormalized = null;
+
+  const header1 = /^(.+?)\s*:\s*(.*)$/;
+  const header2 = /^(.+?)\s*\(\s*(.*?)\s*\)\s*$/;
+  const header3 = /^(?!<@)(.+?)\s+(<@!?\d+>.*|لا ?يوجد.*)$/;
 
   function add(id, normalized, original){
     if (!sections[id]) sections[id] = new Map();
@@ -262,36 +190,35 @@ function extractSections(text){
   }
 
   for (let line of lines) {
-    const m = line.match(headerRegex);
 
-    if (m) {
-      const rawOriginal = cleanHeaderLabel(m[1]);
+    let m = line.match(header1) || line.match(header2) || line.match(header3);
 
-      // لو العنوان مستبعد، تجاهله وتجاهل أي أسطر تحته
+    if (m && !line.startsWith("<@")) {
+
+      const rawOriginal = m[1].trim();
+
       if (excludedHeaders.has(rawOriginal)) {
         currentOriginal = null;
         currentNormalized = null;
         continue;
       }
 
-      currentOriginal = rawOriginal;                    // للاسم الأصلي (العرض)
-      currentNormalized = normalizeLabel(rawOriginal);  // للاسم الموحّد (المقارنة)
+      currentOriginal = rawOriginal;
+      currentNormalized = normalizeLabel(currentOriginal);
 
       const rest = m[2] || "";
-      const idsInline = rest.match(/<@\d+>/g) || [];
+      const idsInline = rest.match(/<@!?\d+>/g) || [];
       for (const id of idsInline) add(id, currentNormalized, currentOriginal);
 
       continue;
     }
 
-    // سطر تابع للعنوان السابق
     if (currentNormalized && currentOriginal) {
-      const ids = line.match(/<@\d+>/g) || [];
+      const ids = line.match(/<@!?\d+>/g) || [];
       for (const id of ids) add(id, currentNormalized, currentOriginal);
     }
   }
 
-  // تحويل Map/Set لشيء سهل الاستخدام: id -> { normalizedLabel: [originals...] }
   const out = {};
   for (const id in sections) {
     out[id] = {};
@@ -303,89 +230,77 @@ function extractSections(text){
 }
 
 function compare(){
-  let supText = clean(document.getElementById("supervision").value);
-  let opsText = clean(document.getElementById("operations").value);
+  const sup = extractSections(clean(document.getElementById("supervision").value));
+  const ops = extractSections(clean(document.getElementById("operations").value));
+  const result = document.getElementById("result");
 
-  let sup = extractSections(supText); // id -> {normLabel: [originals...]}
-  let ops = extractSections(opsText);
-
-  let result = document.getElementById("result");
-  result.innerHTML = "";
-
+  let output = "";
   let hasDifference = false;
 
-  const getNorms = (obj) => new Set(Object.keys(obj || {}));
+  const getNorms = obj => new Set(Object.keys(obj || {}));
 
   const originalsForNorms = (obj, norms) => {
     const out = [];
     for (const n of norms) {
-      const arr = (obj && obj[n]) ? obj[n] : [];
+      const arr = obj[n] || [];
       for (const x of arr) out.push(x);
     }
     return [...new Set(out)];
   };
 
-  // موجود في الإشراف ومش موجود في العمليات
-  for (let id in sup){
-    if(!ops[id]){
+  Object.keys(sup).sort().forEach(id => {
+    if (!ops[id]) {
       hasDifference = true;
-      result.innerHTML += "<div class='missing'>" + id + "</div>";
-      result.innerHTML += "موجود في الإشراف داخل:<br>";
-      const allNorms = Object.keys(sup[id] || {});
-      const originals = originalsForNorms(sup[id], allNorms);
-      result.innerHTML += (originals.join("<br>") || "(بدون تصنيف)");
-      result.innerHTML += "<hr>";
+      output += `<div class='missing'>${id}</div>`;
+      output += "موجود في الإشراف داخل:<br>";
+      output += originalsForNorms(sup[id], Object.keys(sup[id])).join("<br>");
+      output += "<hr>";
     }
-  }
+  });
 
-  // موجود في العمليات ومش موجود في الإشراف
-  for (let id in ops){
-    if(!sup[id]){
+  Object.keys(ops).sort().forEach(id => {
+    if (!sup[id]) {
       hasDifference = true;
-      result.innerHTML += "<div class='missing'>" + id + "</div>";
-      result.innerHTML += "موجود في العمليات داخل:<br>";
-      const allNorms = Object.keys(ops[id] || {});
-      const originals = originalsForNorms(ops[id], allNorms);
-      result.innerHTML += (originals.join("<br>") || "(بدون تصنيف)");
-      result.innerHTML += "<hr>";
+      output += `<div class='missing'>${id}</div>`;
+      output += "موجود في العمليات داخل:<br>";
+      output += originalsForNorms(ops[id], Object.keys(ops[id])).join("<br>");
+      output += "<hr>";
     }
-  }
+  });
 
-  // موجود في الاتنين لكن التصنيف مختلف (نقارن بالـ normalized)
-  for (let id in sup){
-    if(!ops[id]) continue;
+  Object.keys(sup).forEach(id => {
+    if (!ops[id]) return;
 
     const supSet = getNorms(sup[id]);
     const opsSet = getNorms(ops[id]);
 
-    const onlyInSup = [...supSet].filter(x => !opsSet.has(x)).sort();
-    const onlyInOps = [...opsSet].filter(x => !supSet.has(x)).sort();
+    const onlyInSup = [...supSet].filter(x => !opsSet.has(x));
+    const onlyInOps = [...opsSet].filter(x => !supSet.has(x));
 
-    if (onlyInSup.length || onlyInOps.length){
+    if (onlyInSup.length || onlyInOps.length) {
       hasDifference = true;
-
-      result.innerHTML += "<div class='missing'>" + id + "</div>";
-      result.innerHTML += "⚠ موجود في التقريرين لكن التصنيف مختلف:<br><br>";
+      output += `<div class='missing'>${id}</div>`;
+      output += "⚠ موجود في التقريرين لكن التصنيف مختلف:<br><br>";
 
       if (onlyInSup.length){
-        result.innerHTML += "<b>موجود في الإشراف فقط داخل:</b><br>";
-        const originals = originalsForNorms(sup[id], onlyInSup);
-        result.innerHTML += (originals.join("<br>") || "(بدون تصنيف)") + "<br><br>";
+        output += "<b>موجود في الإشراف فقط داخل:</b><br>";
+        output += originalsForNorms(sup[id], onlyInSup).join("<br>") + "<br><br>";
       }
 
       if (onlyInOps.length){
-        result.innerHTML += "<b>موجود في العمليات فقط داخل:</b><br>";
-        const originals = originalsForNorms(ops[id], onlyInOps);
-        result.innerHTML += (originals.join("<br>") || "(بدون تصنيف)") + "<br><br>";
+        output += "<b>موجود في العمليات فقط داخل:</b><br>";
+        output += originalsForNorms(ops[id], onlyInOps).join("<br>") + "<br><br>";
       }
 
-      result.innerHTML += "<hr>";
+      output += "<hr>";
     }
+  });
+
+  if (!hasDifference) {
+    output = "<b>✔ لا يوجد أي اختلاف بين التقريرين</b>";
   }
 
-  if(!hasDifference){
-    result.innerHTML = "<b>✔ لا يوجد أي اختلاف بين التقريرين</b>";
-  }
+  result.innerHTML = output;
 }
 </script>
 
