@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar">
 <head>
@@ -9,8 +10,9 @@
 
 <style>
 * { box-sizing: border-box; }
-h2 { text-align: center; }
-
+h2 {
+  text-align: center;
+}
 body {
   margin: 0;
   font-family: 'Cairo', sans-serif;
@@ -28,21 +30,26 @@ body {
 
 .container {
   display: flex;
-  gap: 40px;
+  gap: 40px;              /* مسافة أكبر بينهم */
   flex-wrap: wrap;
   justify-content: center;
-  max-width: 1500px;
+  max-width: 1500px;      /* مساحة أكبر */
   margin: auto;
 }
 
 .box {
-  flex: 0 1 600px;
-  min-width: 550px;
+  flex: 0 1 600px;        /* عرض ثابت أكبر */
+  min-width: 550px;       /* يمنع الضغط */
   padding: 30px;
   border-radius: 18px;
   background: rgba(30, 41, 59, 0.85);
   backdrop-filter: blur(6px);
   box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  transition: 0.3s ease;
+}
+
+.box:hover {
+  transform: translateY(-5px);
 }
 
 textarea {
@@ -50,10 +57,18 @@ textarea {
   height: 550px;
   padding: 18px;
   border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.1);
   resize: none;
   font-family: 'Cairo', sans-serif;
   background: rgba(15, 23, 42, 0.9);
   color: #fff;
+  transition: 0.3s;
+}
+
+textarea:focus {
+  outline: none;
+  border-color: #38bdf8;
+  box-shadow: 0 0 10px rgba(56,189,248,0.4);
 }
 
 button {
@@ -67,14 +82,24 @@ button {
   font-weight: bold;
   background: linear-gradient(90deg,#38bdf8,#6366f1);
   color: white;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+  transition: 0.3s ease;
 }
 
+button:hover {
+  transform: scale(1.05);
+}
+.box h3 {
+  text-align: center;
+}
 .result {
   margin: 40px auto 0;
   padding: 25px;
   border-radius: 18px;
   background: rgba(30, 41, 59, 0.85);
+  backdrop-filter: blur(6px);
   max-width: 1200px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
 }
 
 .missing {
@@ -96,7 +121,7 @@ hr {
 
 <body>
 
-<h2>📊 مقارنة تقارير الإشراف والعمليات</h2>
+<h2>📊 متابعة السجلات (تقارير العمليات - تقارير الاشراف)</h2>
 
 <div class="container">
   <div class="box">
@@ -115,25 +140,7 @@ hr {
 <div class="result" id="result"></div>
 
 <script>
-
 function clean(text){
-
-  const ignoreSections = [
-    "مسؤول افتتاح المتجر",
-    "المشرف الميداني بروم الكراج",
-    "مشرف المنطقة بروم الكراج",
-    "مشرف المتدرب بروم الكراج"
-  ];
-
-  let lines = text.split("\n");
-
-  lines = lines.filter(line => {
-    const l = line.trim();
-    return !ignoreSections.some(word => l.includes(word));
-  });
-
-  text = lines.join("\n");
-
   return text
     .replace(/\*\*/g,"")
     .replace(/ـ+/g,"")
@@ -141,60 +148,63 @@ function clean(text){
 }
 
 function normalizeLabel(label){
-
   label = label
     .replace(/[إأآا]/g, "ا")
     .replace(/ى/g, "ي")
     .replace(/ة/g, "ه")
     .replace(/[()]/g, "")
     .replace(/\s+/g, " ")
-    .replace(/^ال/, "")
     .trim();
 
-const map = {
+  const map = {
+    "قياده الكراج": "القياده",
+    "قيادة الكراج": "القياده",
+    "قياده": "القياده",
+    "قيادة": "القياده",
 
-  "قياده الكراج": "القياده",
-  "قياده": "القياده",
-  "قيادة": "القياده",
+    "المشرف العام": "اشراف عام",
+    "اشراف عام": "اشراف عام",
 
-  "مشرف عام": "اشراف عام",
-  "المشرف العام": "اشراف عام",
-  "مشرف العام": "اشراف عام",
-  "اشراف عام": "اشراف عام",
+    "المشرف الميداني": "اشراف ميداني",
+    "اشراف ميداني": "اشراف ميداني",
 
-  "مشرف ميداني": "اشراف ميداني",
-  "مشرف الميداني": "اشراف ميداني",
-  "اشراف ميداني": "اشراف ميداني",
+    "مشرفين المناطق": "اشراف المناطق",
+    "مشرف المناطق": "اشراف المناطق",
+    "مشرف المنطقة": "اشراف المناطق",
+    "اشراف المناطق": "اشراف المناطق",
 
-  "مشرفين المناطق": "اشراف المناطق",
-  "مشرف المناطق": "اشراف المناطق",
-  "مشرف المنطقة": "اشراف المناطق",
+    "مشرفين متدربين": "مشرفين متدربين",
 
-  "مشرفين متدربين": "مشرفين متدربين",
+    "السيدات و المعتمدين": "المعتمدين",
+    "السيدات والمعتمدين": "المعتمدين",
+    "لاعب معتمد": "المعتمدين",
 
-  "السيدات و المعتمدين": "المعتمدين",
-  "السيدات والمعتمدين": "المعتمدين",
-  "لاعب معتمد": "المعتمدين",
+    "العمليات": "العمليات",
+    "نائب العمليات": "نائب العمليات",
 
-  "عمليات": "العمليات",
-  "نائب عمليات": "نائب العمليات",
+    "مركز الاتصالات": "مركز الاتصالات",
 
-  "مركز الاتصالات": "مركز الاتصالات",
+    "فني ميناء لوس": "ميناء لوس",
+    "ميناء لوس": "ميناء لوس",
 
-  "فني ميناء لوس": "ميناء لوس",
-  "ميناء لوس": "ميناء لوس",
+    "فني ميناء بوليتو": "ميناء بوليتو",
+    "ميناء بوليتو": "ميناء بوليتو",
 
-  "فني ميناء بوليتو": "ميناء بوليتو",
-  "ميناء بوليتو": "ميناء بوليتو",
-
-  "بحث والانقاذ": "البحث والانقاذ"
-
-};
+    "البحث والانقاذ": "البحث والانقاذ",
+    "البحث والإنقاذ": "البحث والانقاذ"
+  };
 
   return map[label] || label;
 }
 
 function extractSections(text){
+
+  const excludedHeaders = new Set([
+    "مسؤول افتتاح المتجر",
+    "المشرف الميداني بروم الكراج",
+    "مشرف المنطقة بروم الكراج",
+    "مشرف المتدرب بروم الكراج"
+  ]);
 
   const sections = {};
   const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
@@ -203,6 +213,8 @@ function extractSections(text){
   let currentNormalized = null;
 
   const header1 = /^(.+?)\s*:\s*(.*)$/;
+  const header2 = /^(.+?)\s*\(\s*(.*?)\s*\)\s*$/;
+  const header3 = /^(?!<@)(.+?)\s+(<@!?\d+>.*|لا ?يوجد.*)$/;
 
   function add(id, normalized, original){
     if (!sections[id]) sections[id] = new Map();
@@ -212,48 +224,50 @@ function extractSections(text){
 
   for (let line of lines) {
 
-    let m = line.match(header1);
+    let m = line.match(header1) || line.match(header2) || line.match(header3);
 
     if (m && !line.startsWith("<@")) {
 
-      currentOriginal = m[1].trim();
+      const rawOriginal = m[1].trim();
+
+   const normalizedHeader = normalizeLabel(rawOriginal);
+
+if (
+  normalizedHeader.includes("بروم الكراج") ||
+  normalizedHeader === normalizeLabel("مسؤول افتتاح المتجر")
+) {
+  currentOriginal = null;
+  currentNormalized = null;
+  continue;
+}
+
+      currentOriginal = rawOriginal;
       currentNormalized = normalizeLabel(currentOriginal);
 
       const rest = m[2] || "";
       const idsInline = rest.match(/<@!?\d+>/g) || [];
-
-      for (const id of idsInline){
-        add(id, currentNormalized, currentOriginal);
-      }
+      for (const id of idsInline) add(id, currentNormalized, currentOriginal);
 
       continue;
     }
 
     if (currentNormalized && currentOriginal) {
-
       const ids = line.match(/<@!?\d+>/g) || [];
-
-      for (const id of ids){
-        add(id, currentNormalized, currentOriginal);
-      }
+      for (const id of ids) add(id, currentNormalized, currentOriginal);
     }
   }
 
   const out = {};
   for (const id in sections) {
-
     out[id] = {};
-
     for (const [norm, originalsSet] of sections[id].entries()) {
       out[id][norm] = [...originalsSet];
     }
   }
-
   return out;
 }
 
 function compare(){
-
   const sup = extractSections(clean(document.getElementById("supervision").value));
   const ops = extractSections(clean(document.getElementById("operations").value));
   const result = document.getElementById("result");
@@ -272,12 +286,9 @@ function compare(){
     return [...new Set(out)];
   };
 
-  Object.keys(sup).forEach(id => {
-
+  Object.keys(sup).sort().forEach(id => {
     if (!ops[id]) {
-
       hasDifference = true;
-
       output += `<div class='missing'>${id}</div>`;
       output += "موجود في الإشراف داخل:<br>";
       output += originalsForNorms(sup[id], Object.keys(sup[id])).join("<br>");
@@ -285,12 +296,9 @@ function compare(){
     }
   });
 
-  Object.keys(ops).forEach(id => {
-
+  Object.keys(ops).sort().forEach(id => {
     if (!sup[id]) {
-
       hasDifference = true;
-
       output += `<div class='missing'>${id}</div>`;
       output += "موجود في العمليات داخل:<br>";
       output += originalsForNorms(ops[id], Object.keys(ops[id])).join("<br>");
@@ -299,7 +307,6 @@ function compare(){
   });
 
   Object.keys(sup).forEach(id => {
-
     if (!ops[id]) return;
 
     const supSet = getNorms(sup[id]);
@@ -309,9 +316,7 @@ function compare(){
     const onlyInOps = [...opsSet].filter(x => !supSet.has(x));
 
     if (onlyInSup.length || onlyInOps.length) {
-
       hasDifference = true;
-
       output += `<div class='missing'>${id}</div>`;
       output += "⚠ موجود في التقريرين لكن التصنيف مختلف:<br><br>";
 
@@ -322,7 +327,7 @@ function compare(){
 
       if (onlyInOps.length){
         output += "<b>موجود في العمليات فقط داخل:</b><br>";
-        output += originalsForNorms(ops[id], onlyInOps).join("<br><br>");
+        output += originalsForNorms(ops[id], onlyInOps).join("<br>") + "<br><br>";
       }
 
       output += "<hr>";
@@ -335,9 +340,7 @@ function compare(){
 
   result.innerHTML = output;
 }
-
 </script>
 
 </body>
-</html>
 </html>
