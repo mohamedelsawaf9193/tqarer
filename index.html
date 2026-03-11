@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="ar">
 <head>
@@ -140,6 +141,39 @@ hr {
 <div class="result" id="result"></div>
 
 <script>
+
+/* ===== API USERS ===== */
+
+let usersMap = {};
+
+fetch("https://mechanic-backend.vercel.app/api/users")
+.then(res => res.json())
+.then(data => {
+
+  const users = Array.isArray(data) ? data : (data.users || data.data || []);
+
+  users.forEach(user => {
+    if(user.discord){
+      usersMap[String(user.discord)] = user.nickname || "";
+    }
+  });
+
+});
+
+/* ===== HELPER ===== */
+
+function getDiscordId(mention){
+  return mention.replace(/[<@!>]/g,"");
+}
+
+function formatUser(id){
+  const cleanId = getDiscordId(id);
+  const name = usersMap[cleanId];
+  return name ? `${name} (${id})` : id;
+}
+
+/* ===== ORIGINAL CODE ===== */
+
 function clean(text){
   return text
     .replace(/\*\*/g,"")
@@ -230,16 +264,16 @@ function extractSections(text){
 
       const rawOriginal = m[1].trim();
 
-   const normalizedHeader = normalizeLabel(rawOriginal);
+      const normalizedHeader = normalizeLabel(rawOriginal);
 
-if (
-  normalizedHeader.includes("بروم الكراج") ||
-  normalizedHeader === normalizeLabel("مسؤول افتتاح المتجر")
-) {
-  currentOriginal = null;
-  currentNormalized = null;
-  continue;
-}
+      if (
+        normalizedHeader.includes("بروم الكراج") ||
+        normalizedHeader === normalizeLabel("مسؤول افتتاح المتجر")
+      ) {
+        currentOriginal = null;
+        currentNormalized = null;
+        continue;
+      }
 
       currentOriginal = rawOriginal;
       currentNormalized = normalizeLabel(currentOriginal);
@@ -289,7 +323,7 @@ function compare(){
   Object.keys(sup).sort().forEach(id => {
     if (!ops[id]) {
       hasDifference = true;
-      output += `<div class='missing'>${id}</div>`;
+      output += `<div class='missing'>${formatUser(id)}</div>`;
       output += "موجود في الإشراف داخل:<br>";
       output += originalsForNorms(sup[id], Object.keys(sup[id])).join("<br>");
       output += "<hr>";
@@ -299,7 +333,7 @@ function compare(){
   Object.keys(ops).sort().forEach(id => {
     if (!sup[id]) {
       hasDifference = true;
-      output += `<div class='missing'>${id}</div>`;
+      output += `<div class='missing'>${formatUser(id)}</div>`;
       output += "موجود في العمليات داخل:<br>";
       output += originalsForNorms(ops[id], Object.keys(ops[id])).join("<br>");
       output += "<hr>";
@@ -317,7 +351,7 @@ function compare(){
 
     if (onlyInSup.length || onlyInOps.length) {
       hasDifference = true;
-      output += `<div class='missing'>${id}</div>`;
+      output += `<div class='missing'>${formatUser(id)}</div>`;
       output += "⚠ موجود في التقريرين لكن التصنيف مختلف:<br><br>";
 
       if (onlyInSup.length){
